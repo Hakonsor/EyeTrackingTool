@@ -11,8 +11,10 @@ public class DepthBlurEffectOculus : MonoBehaviour
         cameraRig = GetComponent<OVRCameraRig>();
         if (cameraRig)
         {
-            var cam1 = cameraRig.leftEyeCamera.GetComponent<Camera>().depthTextureMode |= DepthTextureMode.Depth;
-            var cam12 = cameraRig.rightEyeCamera.GetComponent<Camera>().depthTextureMode |= DepthTextureMode.Depth;
+            var cam1 = cameraRig.leftEyeCamera.GetComponent<Camera>().depthTextureMode;
+            cam1  |= DepthTextureMode.Depth;
+            var cam12 = cameraRig.rightEyeCamera.GetComponent<Camera>().depthTextureMode;
+            cam12 |= DepthTextureMode.Depth;
             //cameraRig.leftEyeCamera.GetComponent<Camera>().targetTexture.wrapMode = TextureWrapMode.Clamp;
             //cameraRig.rightEyeCamera.GetComponent<Camera>().targetTexture.wrapMode = TextureWrapMode.Clamp;
         }
