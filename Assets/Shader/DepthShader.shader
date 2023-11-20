@@ -3,9 +3,7 @@ Shader"Hidden/DepthShader"
     Properties
     {
         _MainTex ("Texture", 2D) = "white" {}
-        _Focus ("Focus", Float) = 0.0 
-        _HitX ("HitY", Float) = 0.0 
-        _HitY ("HitX", Float) = 0.0 
+        _Focal ("Focal", Float) = 1.0
     }
     SubShader
     {
@@ -46,63 +44,55 @@ Shader"Hidden/DepthShader"
                 o.uv = v.uv;
                 return o;
             }
-
+            
             UNITY_DECLARE_SCREENSPACE_TEXTURE( _MainTex);
             UNITY_DECLARE_DEPTH_TEXTURE( _CameraDepthTexture);
-            float _Focus;
-            float _HitY;
-            float _HitX;
+            float _Focal;
+            //float _HitY;
+            //float _HitX;
 
 
             fixed4 frag (v2f i) : SV_Target
             {
-                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
-                float4 col = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, i.uv);
+                    UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
+                    float4 col = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, i.uv);
+                    float depth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, i.uv).r;
+               
+                    float a = 1000;
+                    float b = 0.1;
+                    float nonLinearDepth = 1.0 / (a * depth + b);
+                    float distance = _Focal/1000;
+ 
+                    float distanceMin = 0.002;
+                    float distanceMax = 0.014;
+                    float nonLinearDepthMin = 0.006;
+                    float nonLinearDepthMax = 0.04;
 
-                float depth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, i.uv).r;
+                    float normalizedDistance = saturate((distance - distanceMin) / (distanceMax - distanceMin));
+                    float normalizedNonLinearDepth = saturate((nonLinearDepth - nonLinearDepthMin) / (nonLinearDepthMax - nonLinearDepthMin));
+                    if(abs(normalizedDistance - normalizedNonLinearDepth) > 0.15){
+                   
+                        float2 texelSize = 1.0 / _ScreenParams.xy;
+                        float4 col = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, i.uv);
 
-                float threshold = 0.1f;
-                float2 hitPoint = float2(_HitX, _HitY);
-                float distanceFromHit = distance(i.uv, hitPoint);
-               //if(_Focus > depth) {
-               //     return col;
-               // }
+                        // Apply a 7x7 Box Blur for a stronger effect
+                        float3 blurredColor = float3(0, 0, 0);
 
-                if (_Focus < depth ) 
-                {
+                        for (int x = -3; x <= 3; x++) { // Increased the loop boundaries to -3 and 3
+                            for (int y = -3; y <= 3; y++) { // Increased the loop boundaries to -3 and 3
+                                float2 offset = float2(x, y) * texelSize;
+                                float4 nearbyCol = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, i.uv + offset);
+                                blurredColor += nearbyCol.rgb;
+                            }
+                        }
+
+                        blurredColor /= 49.0; // Increased the divisor to 49 (7x7 kernel)
+
+                        return float4(blurredColor, 1.0);
+                    }
                     return col;
-                }
-                //float noe = abs((1-_Focus) - depth)
-                return depth ;
-                
-                
 
-                
-                //float blurRadius = distanceFromHit * 0.05; // Increase blur based on distance
-
-                //if (abs(_Focus - depth) < threshold && distanceFromHit < 0.2 ) 
-                //{
-                //    // The pixel is at the focus depth, render it in color
-                //    return col;
-                //}
-                //else
-                //{
-                //    // Apply blur effect
-                //    float4 blurredColor = float4(0, 0, 0, 0);
-                //    int samples = 9; // Total number of samples (3x3 kernel)
-                //    for (int x = -1; x <= 1; x++)
-                //    {
-                //        for (int y = -1; y <= 1; y++)
-                //        {
-                //            float2 sampleUV = i.uv + float2(x, y) * blurRadius;
-                //            blurredColor += UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, sampleUV);
-                //        }
-                //    }
-                //    blurredColor /= samples;
-
-                //    return blurredColor;
-   
-                // }
+  
                  }
             ENDCG
         }

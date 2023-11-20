@@ -1,15 +1,18 @@
+using OculusSampleFramework;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using static OVRPlugin;
 
 [ExecuteInEditMode]
 [RequireComponent(typeof(Camera))]
-public class ScreenDepth1 : MonoBehaviour
+public class ScreenDepth : MonoBehaviour
 {
     public Camera cam;
     public Material material;
-    public GameObject eye;
-
+    public GameObject eyeright;
+    public GameObject eyeleft;
+    public bool onlyonce = false;
     public float raydistance = 1000.0f;
     public LayerMask raycastLayers = -1;
         private List<float> lastFiveDistances = new List<float>();
@@ -29,21 +32,30 @@ public class ScreenDepth1 : MonoBehaviour
         if (cam.depthTextureMode != DepthTextureMode.Depth)
             cam.depthTextureMode = DepthTextureMode.Depth;
 
-        Ray ray = new Ray(eye.transform.position, eye.transform.forward);
-        if (Physics.Raycast(ray, out RaycastHit hit, raydistance, raycastLayers))
-        {
-            var viewportPoint = cam.WorldToViewportPoint(hit.point);
-            var viewportDepth = viewportPoint.z;
-            var distance = cam.WorldToViewportPoint(hit.point).z/cam.farClipPlane;
-            material.SetFloat("_HitX", viewportPoint.x);
-            material.SetFloat("_HitY", viewportPoint.y);
 
-            material.SetFloat("_Focus", distance);
-            
-        }
-        else
+        // Define the ray directions from both eyes
+        Vector3 rightFront = eyeright.transform.forward * 10;
+        Vector3 leftFront = eyeleft.transform.forward * 10;
+        //Debug.Log("rightFront" + rightFront);
+        //Debug.Log("leftFront" + leftFront);
+        // Calculate the midpoint between the two ray directions
+        Vector3 midpoint = (rightFront + leftFront) / 2;
+
+        //Debug.Log("midpoint" + midpoint);
+        // Calculate the midpoint between the eye positions
+        Vector3 eyeMidpoint = (eyeright.transform.position + eyeleft.transform.position) / 2;
+        //Debug.Log("midpoint" + midpoint);
+        // Create a ray starting from the midpoint between the two ray directions and going towards the eye midpoint
+        Ray ray = new Ray(eyeMidpoint, midpoint);
+
+        if (Physics.Raycast(ray, out RaycastHit hit, raydistance, -1))
         {
-            material.SetFloat("_Focus", 1.0f);
+            // Calculate the distance from the hit point to the midpoint between the eyes
+            float distance = Vector3.Distance(eyeMidpoint, hit.point);
+
+            // Send the distance to the shader
+            material.SetFloat("_Focal", distance);
+            Debug.Log("Distance set to " + material.GetFloat("_Focal"));
         }
     }
 
