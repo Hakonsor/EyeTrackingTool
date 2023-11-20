@@ -87,7 +87,7 @@ Shader"Hidden/DepthShader1"
                     return blurredColor;
    
                  }
-                 }
+            }
             ENDCG
         }
     }

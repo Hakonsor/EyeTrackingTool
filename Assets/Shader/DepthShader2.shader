@@ -1,4 +1,4 @@
-Shader"Hidden/DepthShader"
+Shader"Hidden/DepthShader2"
 {
     Properties
     {
@@ -47,8 +47,8 @@ Shader"Hidden/DepthShader"
                 return o;
             }
 
-            UNITY_DECLARE_SCREENSPACE_TEXTURE( _MainTex);
-            UNITY_DECLARE_DEPTH_TEXTURE( _CameraDepthTexture);
+            UNITY_DECLARE_SCREENSPACE_TEXTURE(_MainTex);
+            UNITY_DECLARE_DEPTH_TEXTURE(_CameraDepthTexture);
             float _Focus;
             float _HitY;
             float _HitX;
@@ -58,53 +58,39 @@ Shader"Hidden/DepthShader"
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
                 float4 col = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, i.uv);
-
-                float depth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, i.uv).r;
-
-                float threshold = 0.1f;
+                float depth = LinearEyeDepth(SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, i.uv).r);
+                
+                float threshold = 0.01f;
                 float2 hitPoint = float2(_HitX, _HitY);
                 float distanceFromHit = distance(i.uv, hitPoint);
-                //if(_Focus > depth) {
-                //     return col;
-                // }
-                //_Focus /= 10.0;
-
-                if (_Focus < depth) 
+                //float distanceFromHit = _Focus;
+                //float blurRadius = distanceFromHit * 0.02; // Increase blur based on distance
+                float blurRadius = abs(depth - _Focus) * 0.001;
+                /* 
+                if (abs(_Focus - depth) < threshold && distanceFromHit < 0.2) 
                 {
+                    // The pixel is at the focus depth, render it in color
                     return col;
                 }
-                //float noe = abs((1-_Focus) - depth)
-                return depth ;
-                
-                
+                else
+                {
+                }
+                */
+                // Apply blur effect
+                float4 blurredColor = float4(0, 0, 0, 0);
+                int samples = 9; // Total number of samples (3x3 kernel)
+                for (int x = -1; x <= 1; x++)
+                {
+                    for (int y = -1; y <= 1; y++)
+                    {
+                        float2 sampleUV = i.uv + float2(x, y) * blurRadius;
+                        blurredColor += UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, sampleUV);
+                    }
+                }
+                blurredColor /= samples;
 
-                
-                //float blurRadius = distanceFromHit * 0.05; // Increase blur based on distance
-
-                //if (abs(_Focus - depth) < threshold && distanceFromHit < 0.2 ) 
-                //{
-                //    // The pixel is at the focus depth, render it in color
-                //    return col;
-                //}
-                //else
-                //{
-                //    // Apply blur effect
-                //    float4 blurredColor = float4(0, 0, 0, 0);
-                //    int samples = 9; // Total number of samples (3x3 kernel)
-                //    for (int x = -1; x <= 1; x++)
-                //    {
-                //        for (int y = -1; y <= 1; y++)
-                //        {
-                //            float2 sampleUV = i.uv + float2(x, y) * blurRadius;
-                //            blurredColor += UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, sampleUV);
-                //        }
-                //    }
-                //    blurredColor /= samples;
-
-                //    return blurredColor;
-   
-                // }
-                 }
+                return blurredColor;
+            }
             ENDCG
         }
     }
